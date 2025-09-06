@@ -13,6 +13,7 @@ import time # Added for sleep functionality
 # client_id = YOUR_CLIENT_ID
 # client_secret = YOUR_CLIENT_SECRET
 
+# Initializes and returns a Reddit instance.
 def initialize_reddit():
     """Initializes and returns a Reddit instance using praw.ini."""
     try:
@@ -23,6 +24,7 @@ def initialize_reddit():
         print(f"Error initializing Reddit: {e}")
         return None
 
+# Loads response phrases from a text file.
 def load_response_phrases(file_path):
     """Loads response phrases from a text file, one phrase per line."""
     try:
@@ -37,12 +39,14 @@ def load_response_phrases(file_path):
         print(f"Error loading response phrases: {e}")
         return []
 
+# Returns a random response phrase.
 def get_random_response(phrases):
     """Returns a random response phrase from the loaded list."""
     if phrases:
         return random.choice(phrases)
     return "Hello there!" # Default response if no phrases are loaded
 
+# Fetches and extracts readable text from a URL.
 def get_web_content(url):
     """
     Fetches content from a URL and extracts readable text using BeautifulSoup.
@@ -71,6 +75,7 @@ def get_web_content(url):
         print(f"Error processing content from {url}: {e}")
         return None
 
+# Generates a response, optionally including content from a URL.
 def generate_agent_response(response_phrases, url=None, snippet_length=200):
     """
     Generates a response, optionally including content from a URL.
@@ -86,6 +91,7 @@ def generate_agent_response(response_phrases, url=None, snippet_length=200):
     
     return base_response
 
+# Main function to run the Reddit agent.
 def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, external_link_for_response=None):
     """
     Main function to run the Reddit agent: browses subreddits, detects relevant posts,
