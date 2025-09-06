@@ -73,6 +73,21 @@ def get_web_content(url):
         print(f"Error processing content from {url}: {e}")
         return None
 
+def generate_agent_response(response_phrases, url=None, snippet_length=200):
+    """
+    Generates a response, optionally including content from a URL.
+    Combines a random pre-defined phrase with a snippet from the web content.
+    """
+    base_response = get_random_response(response_phrases)
+    
+    if url:
+        web_text = get_web_content(url)
+        if web_text:
+            snippet = web_text[:snippet_length].strip() + "..." if len(web_text) > snippet_length else web_text.strip()
+            return f"{base_response}\n\nHere's something I found: \"{snippet}\"\n\n(Source: {url})"
+    
+    return base_response
+
 def browse_subreddits(reddit_instance, subreddits_to_browse):
     """
     Browses through a list of subreddits and prints the titles of new posts.
@@ -105,19 +120,16 @@ if __name__ == "__main__":
         # Load response phrases
         response_file = 'response_phrases.txt'
         response_list = load_response_phrases(response_file)
+
+        # Example usage of response generation:
+        print("\n--- Testing Response Generation ---")
+        # Test with just a random phrase
+        print(f"Agent Response (no URL): {generate_agent_response(response_list)}")
+
+        # Test with a URL
+        test_url = "https://www.google.com" # Replace with a real URL for testing
+        print(f"\nAgent Response (with URL): {generate_agent_response(response_list, url=test_url)}")
         
-        if response_list:
-            print(f"Sample random response: {get_random_response(response_list)}")
-
-        # Example of fetching web content:
-        # test_url = "https://www.example.com" # Replace with a real URL for testing
-        # web_text = get_web_content(test_url)
-        # if web_text:
-        #     print("\n--- Extracted Web Content (first 200 chars) ---")
-        #     print(web_text[:200])
-        # else:
-        #     print("Failed to extract web content.")
-
         # Example usage: Provide your desired subreddits here
         my_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend'] # Example subreddits
         browse_subreddits(reddit, my_subreddits)
