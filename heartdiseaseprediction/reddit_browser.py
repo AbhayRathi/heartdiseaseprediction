@@ -1,8 +1,9 @@
 import praw
 import os
 import random
-import requests # Added for web fetching
-from bs4 import BeautifulSoup # Added for HTML parsing
+import requests
+from bs4 import BeautifulSoup
+import time # Added for sleep functionality
 
 # --- Configuration (praw.ini) ---
 # Make sure your praw.ini file is in this directory with your credentials:
@@ -53,14 +54,11 @@ def get_web_content(url):
         response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        # Remove script and style elements
         for script_or_style in soup(['script', 'style']):
             script_or_style.extract()
         
-        # Get text, strip whitespace, and join lines
         text = soup.get_text()
         lines = (line.strip() for line in text.splitlines())
-        # Remove empty lines and join with a space
         chunks = (phrase.strip() for phrase in ' '.join(lines).split("  "))
         cleaned_text = ' '.join(chunk for chunk in chunks if chunk)
         
@@ -88,50 +86,79 @@ def generate_agent_response(response_phrases, url=None, snippet_length=200):
     
     return base_response
 
-def browse_subreddits(reddit_instance, subreddits_to_browse):
+def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, external_link_for_response=None):
     """
-    Browses through a list of subreddits and prints the titles of new posts.
-    This is a basic browsing function without advanced filtering or response logic.
+    Main function to run the Reddit agent: browses subreddits, detects relevant posts,
+    and simulates generating responses.
     """
     if not reddit_instance:
-        print("Reddit instance not available. Cannot browse subreddits.")
+        print("Reddit instance not available. Agent cannot run.")
         return
-
-    print("\n--- Starting Subreddit Browsing ---")
-    for sub_name in subreddits_to_browse:
+    
+    print("\n--- Starting Reddit Agent Cycle ---")
+    for subreddit_name in subreddits:
         try:
-            subreddit = reddit_instance.subreddit(sub_name)
-            print(f"\nBrowsing r/{sub_name} for new posts (Top 5):")
-            for submission in subreddit.new(limit=5): # Get the 5 newest posts
-                print(f"  - {submission.title}")
-        except Exception as e:
-            print(f"Error browsing r/{sub_name}: {e}")
+            subreddit = reddit_instance.subreddit(subreddit_name)
+            print(f"Browsing r/{subreddit_name} for new posts...")
+            
+            # Stream new posts (or use .hot(), .top() for initial scan)
+            # Use limit to control how many posts to check per cycle
+            for submission in subreddit.new(limit=15):
+                title = submission.title.lower()
+                selftext = submission.selftext.lower() # Post body
+                
+                # Check for keywords in title or selftext
+                if any(keyword in title or keyword in selftext for keyword in keywords):
+                    print(f"  [DETECTED] Relevant post: '{submission.title}' (ID: {submission.id}) by u/{submission.author}")
+                    
+                    # Generate a response for the detected post
+                    agent_response = generate_agent_response(response_phrases, url=external_link_for_response)
+                    print(f"  [RESPONSE  ] -> {agent_response[:100]}...") # Print first 100 chars of response
+                    
+                    # --- Placeholder for actual posting logic ---
+                    # try:
+                    #     # submission.reply(agent_response)
+                    #     print(f"  [ACTION    ] Replied to post ID: {submission.id}")
+                    # except praw.exceptions.APIException as e:
+                    #     print(f"  [ERROR     ] Failed to reply to post {submission.id}: {e}")
+                    # time.sleep(10) # Avoid rate limiting (adjust as needed)
 
-    print("--- Finished Subreddit Browsing ---")
+                # else:
+                #     print(f"  [SKIPPED   ] No keywords found in: {submission.title}")
+
+            # Optional: Add a delay between subreddit checks to be polite
+            time.sleep(5) 
+
+        except Exception as e:
+            print(f"Error running agent for r/{subreddit_name}: {e}")
+    
+    print("--- Reddit Agent Cycle Finished ---")
 
 if __name__ == "__main__":
-    # Ensure praw.ini and response_phrases.txt are in the correct directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     print(f"Current working directory changed to: {os.getcwd()}")
 
-    reddit = initialize_reddit()
-    if reddit:
-        # Load response phrases
+    reddit_instance = initialize_reddit()
+    if reddit_instance:
         response_file = 'response_phrases.txt'
         response_list = load_response_phrases(response_file)
 
-        # Example usage of response generation:
-        print("\n--- Testing Response Generation ---")
-        # Test with just a random phrase
-        print(f"Agent Response (no URL): {generate_agent_response(response_list)}")
+        # --- Agent Configuration ---
+        # These are the subreddits and keywords provided by the user
+        target_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend']
+        search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI']
+        external_url_for_agent_response = "https://playhouse-ai.world/" # This URL will be used for responses
 
-        # Test with a URL
-        test_url = "https://www.google.com" # Replace with a real URL for testing
-        print(f"\nAgent Response (with URL): {generate_agent_response(response_list, url=test_url)}")
-        
-        # Example usage: Provide your desired subreddits here
-        my_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend'] # Example subreddits
-        browse_subreddits(reddit, my_subreddits)
+        print("\n--- Initializing Reddit Agent with following configuration ---")
+        print(f"Subreddits: {target_subreddits}")
+        print(f"Keywords: {search_keywords}")
+        print(f"Response phrases loaded: {len(response_list) > 0}")
+        if external_url_for_agent_response: 
+            print(f"Using external link for responses: {external_url_for_agent_response}")
+        print("----------------------------------------------------------")
+
+        run_reddit_agent(reddit_instance, target_subreddits, search_keywords, response_list, external_url_for_agent_response)
+
     else:
         print("Failed to initialize Reddit. Please check praw.ini credentials.")
