@@ -1,6 +1,8 @@
 import praw
 import os
-import random # Added for random response selection
+import random
+import requests # Added for web fetching
+from bs4 import BeautifulSoup # Added for HTML parsing
 
 # --- Configuration (praw.ini) ---
 # Make sure your praw.ini file is in this directory with your credentials:
@@ -24,7 +26,6 @@ def load_response_phrases(file_path):
     """Loads response phrases from a text file, one phrase per line."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            # Each line is considered a separate phrase
             phrases = [line.strip() for line in f if line.strip()]
         print(f"Loaded {len(phrases)} response phrases from {file_path}.")
         return phrases
@@ -41,6 +42,36 @@ def get_random_response(phrases):
         return random.choice(phrases)
     return "Hello there!" # Default response if no phrases are loaded
 
+def get_web_content(url):
+    """
+    Fetches content from a URL and extracts readable text using BeautifulSoup.
+    Returns a string of extracted text, or None if an error occurs.
+    """
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Remove script and style elements
+        for script_or_style in soup(['script', 'style']):
+            script_or_style.extract()
+        
+        # Get text, strip whitespace, and join lines
+        text = soup.get_text()
+        lines = (line.strip() for line in text.splitlines())
+        # Remove empty lines and join with a space
+        chunks = (phrase.strip() for phrase in ' '.join(lines).split("  "))
+        cleaned_text = ' '.join(chunk for chunk in chunks if chunk)
+        
+        print(f"Successfully extracted content from {url}")
+        return cleaned_text
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching content from {url}: {e}")
+        return None
+    except Exception as e:
+        print(f"Error processing content from {url}: {e}")
+        return None
 
 def browse_subreddits(reddit_instance, subreddits_to_browse):
     """
@@ -77,6 +108,15 @@ if __name__ == "__main__":
         
         if response_list:
             print(f"Sample random response: {get_random_response(response_list)}")
+
+        # Example of fetching web content:
+        # test_url = "https://www.example.com" # Replace with a real URL for testing
+        # web_text = get_web_content(test_url)
+        # if web_text:
+        #     print("\n--- Extracted Web Content (first 200 chars) ---")
+        #     print(web_text[:200])
+        # else:
+        #     print("Failed to extract web content.")
 
         # Example usage: Provide your desired subreddits here
         my_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend'] # Example subreddits
