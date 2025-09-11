@@ -16,11 +16,11 @@ import itertools
 
 # --- Configuration (praw.ini) ---
 # Make sure your praw.ini file is in this directory with your credentials:
-# [DEFAULT]
-# username = YOUR_REDDIT_USERNAME
-# password = YOUR_REDDIT_PASSWORD
-# client_id = YOUR_CLIENT_ID
-# client_secret = YOUR_CLIENT_SECRET
+[DEFAULT]
+username = FederalTea4869
+password = Ilovebagels12$
+client_id = RKqeIe106WzGmMhdrRbMaQ
+client_secret = EizlK89J_G8XSMHC3j0f4ATWOk9NXA
 
 # Global iterator for proxy rotation
 proxy_cycle = None
