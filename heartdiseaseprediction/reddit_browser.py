@@ -357,8 +357,6 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
     print("--- Reddit Agent Cycle Finished ---")
 
 if __name__ == "__main__":
-    global proxy_cycle
-
     # Ensure the script runs from its directory to find configuration files
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
