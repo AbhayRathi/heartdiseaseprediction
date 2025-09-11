@@ -4,7 +4,7 @@ import random
 import requests
 from bs4 import BeautifulSoup
 import time
-import itertools # Added for proxy rotation
+import itertools
 
 # --- Configuration (praw.ini) ---
 # Make sure your praw.ini file is in this directory with your credentials:
@@ -21,8 +21,6 @@ proxy_cycle = None
 def initialize_reddit():
     """Initializes and returns a Reddit instance using praw.ini."""
     try:
-        # PRAW will automatically look for praw.ini in the current working directory
-        # Initialize Reddit without a session for now, we'll configure session later if proxies are used
         reddit = praw.Reddit('DEFAULT')
         print("Reddit instance initialized successfully.")
         return reddit
@@ -71,11 +69,38 @@ def get_next_proxy():
         try:
             return next(proxy_cycle)
         except StopIteration:
-            # If all proxies are exhausted, reset the cycle (or handle as needed)
             print("All proxies exhausted, restarting cycle.")
-            # This would ideally reload proxies or handle a permanent issue
-            return None # Or reinitialize proxy_cycle if you have a way to refresh the list
+            return None
     return None
+
+# Loads IDs of posts that have already been replied to.
+def load_replied_posts(file_path):
+    """
+    Loads a set of submission IDs from a file that the agent has already replied to.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            replied_ids = {line.strip() for line in f if line.strip()}
+        print(f"Loaded {len(replied_ids)} previously replied posts from {file_path}.")
+        return replied_ids
+    except FileNotFoundError:
+        print(f"Replied posts file not found at {file_path}. Starting with empty set.")
+        return set()
+    except Exception as e:
+        print(f"Error loading replied posts: {e}")
+        return set()
+
+# Saves an ID to the list of replied posts.
+def save_replied_post(file_path, submission_id):
+    """
+    Saves a submission ID to the file of replied posts.
+    """
+    try:
+        with open(file_path, 'a', encoding='utf-8') as f:
+            f.write(submission_id + '\n')
+        print(f"Saved replied post ID: {submission_id}")
+    except Exception as e:
+        print(f"Error saving replied post ID {submission_id}: {e}")
 
 # Returns a random response phrase.
 def get_random_response(phrases):
@@ -135,10 +160,10 @@ def generate_agent_response(response_phrases, url=None, snippet_length=200, prox
     return base_response
 
 # Main function to run the Reddit agent.
-def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, external_link_for_response=None):
+def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, replied_posts_file, replied_posts_set, external_link_for_response=None):
     """
     Main function to run the Reddit agent: browses subreddits, detects relevant posts,
-    and simulates generating responses.
+    and simulates generating/posting responses, preventing duplicates.
     """
     if not reddit_instance:
         print("Reddit instance not available. Agent cannot run.")
@@ -157,27 +182,28 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, ex
                 selftext = submission.selftext.lower() # Post body
                 
                 if any(keyword in title or keyword in selftext for keyword in keywords):
-                    print(f"  [DETECTED] Relevant post: '{submission.title}' (ID: {submission.id}) by u/{submission.author}")
-                    
-                    agent_response = generate_agent_response(response_phrases, url=external_link_for_response, proxy=current_proxy)
-                    print(f"  [RESPONSE  ] -> {agent_response[:100]}...") # Print first 100 chars of response
-                    
-                    # --- Placeholder for actual posting logic ---
-                    # try:
-                    #     # submission.reply(agent_response)
-                    #     print(f"  [ACTION    ] Replied to post ID: {submission.id}")
-                    # except praw.exceptions.APIException as e:
-                    #     print(f"  [ERROR     ] Failed to reply to post {submission.id}: {e}")
-                    # time.sleep(10) # Avoid rate limiting (adjust as needed)
-
-                # else:
-                #     print(f"  [SKIPPED   ] No keywords found in: {submission.title}")
+                    if submission.id not in replied_posts_set:
+                        print(f"  [DETECTED] Relevant post: '{submission.title}' (ID: {submission.id}) by u/{submission.author}")
+                        
+                        agent_response = generate_agent_response(response_phrases, url=external_link_for_agent_response, proxy=current_proxy)
+                        print(f"  [RESPONSE  ] -> {agent_response[:100]}...") # Print first 100 chars of response
+                        
+                        # --- Actual posting logic ---
+                        try:
+                            submission.reply(agent_response)
+                            print(f"  [ACTION    ] Replied to post ID: {submission.id}")
+                            replied_posts_set.add(submission.id)
+                            save_replied_post(replied_posts_file, submission.id)
+                        except praw.exceptions.APIException as e:
+                            print(f"  [ERROR     ] Failed to reply to post {submission.id}: {e}")
+                        time.sleep(10) # Avoid rate limiting (adjust as needed, Reddit limits 1 reply per 10 minutes per user)
+                    else:
+                        print(f"  [SKIPPED   ] Already replied to post ID: {submission.id}")
 
             time.sleep(5) # Optional: Add a delay between subreddit checks to be polite
 
         except Exception as e:
             print(f"Error running agent for r/{subreddit_name}: {e}")
-            # Consider rotating proxy if an error occurs
             current_proxy = get_next_proxy() 
             if not current_proxy:
                 print("No more proxies available. Agent stopping.")
@@ -193,7 +219,6 @@ if __name__ == "__main__":
     os.chdir(script_dir)
     print(f"Current working directory changed to: {os.getcwd()}")
 
-    # Load proxies at the start
     proxies_file = 'proxies.txt'
     available_proxies = load_proxies(proxies_file)
     if available_proxies:
@@ -203,23 +228,26 @@ if __name__ == "__main__":
 
     reddit_instance = initialize_reddit()
 
-    # Configure Reddit instance to use proxy if available
     if reddit_instance and available_proxies:
-        first_proxy = get_next_proxy() # Get the first proxy to initialize PRAW's session
+        first_proxy = get_next_proxy() 
         if first_proxy:
             session = requests.Session()
             session.proxies = {"http": first_proxy, "https": first_proxy}
-            reddit_instance._core._requestor._http = session # PRAW's internal requests session
+            reddit_instance._core._requestor._http = session
             print(f"Reddit API configured to use proxy: {first_proxy}")
 
     if reddit_instance:
         response_file = 'response_phrases.txt'
         response_list = load_response_phrases(response_file)
 
+        # File to store replied post IDs
+        replied_posts_filename = 'replied_posts.txt'
+        replied_posts_set = load_replied_posts(replied_posts_filename)
+
         # --- Agent Configuration ---
         target_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend']
         search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI']
-        external_url_for_agent_response = "https://playhouse-ai.world/" # This URL will be used for responses
+        external_url_for_agent_response = "https://playhouse-ai.world/" 
 
         print("\n--- Initializing Reddit Agent with following configuration ---")
         print(f"Subreddits: {target_subreddits}")
@@ -229,7 +257,7 @@ if __name__ == "__main__":
             print(f"Using external link for responses: {external_url_for_agent_response}")
         print("----------------------------------------------------------")
 
-        run_reddit_agent(reddit_instance, target_subreddits, search_keywords, response_list, external_url_for_agent_response)
+        run_reddit_agent(reddit_instance, target_subreddits, search_keywords, response_list, replied_posts_filename, replied_posts_set, external_url_for_agent_response)
 
     else:
         print("Failed to initialize Reddit. Please check praw.ini credentials.")
