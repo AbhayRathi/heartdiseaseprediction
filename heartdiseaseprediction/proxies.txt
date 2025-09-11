@@ -3,7 +3,11 @@
 #another thing we have to consider is if we want the agent to be running on the cloud so that 
 #my computer doesn't have to be on the whole time, otherwise it would be better to user
 # an online platform.
-
-
 # Example: http://user:pass@ip:port
 # Example: socks5://ip:port
+
+
+
+http://myproxy.com:8080
+http://user:password@192.168.1.1:3128
+socks5://localhost:9050
