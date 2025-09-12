@@ -334,7 +334,7 @@ def generate_agent_response(response_phrases, url=None, snippet_length=200, prox
     return final_response
 
 # Main function to run the Reddit agent.
-def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, replied_posts_file, replied_posts_set, external_link_for_agent_response=None):
+def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, replied_posts_file, replied_posts_set, external_link_for_agent_response=None, use_llm=False, llm_prompt_prefix=""):
     """
     Executes the main logic of the Reddit agent.
 
@@ -353,6 +353,10 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
         replied_posts_set (set): A set containing IDs of posts already replied to.
         external_link_for_agent_response (str, optional): A URL to fetch content from
                                                            for richer responses. Defaults to None.
+        use_llm (bool, optional): If True, an LLM will be used to generate the response.
+                                  Defaults to False.
+        llm_prompt_prefix (str, optional): A prefix to add to the prompt sent to the LLM.
+                                           Defaults to an empty string.
     """
     if not reddit_instance:
         print("Reddit instance not available. Agent cannot run.")
@@ -378,7 +382,15 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
                         print(f"  [DETECTED] Relevant post: '{submission.title}' (ID: {submission.id}) by u/{submission.author}")
                         
                         # Generate the agent's response
-                        agent_response = generate_agent_response(response_phrases, url=external_link_for_agent_response, proxy=current_proxy)
+                        llm_input_context = f"User post title: {submission.title}\nUser post body: {submission.selftext}"
+                        full_llm_prompt = f"{llm_prompt_prefix}\n\n{llm_input_context}"
+                        
+                        agent_response = generate_agent_response(response_phrases,
+                                                                 url=external_link_for_agent_response,
+                                                                 proxy=current_proxy,
+                                                                 use_llm=use_llm,
+                                                                 llm_prompt_prefix=full_llm_prompt)
+                        
                         print(f"  [RESPONSE  ] -> {agent_response[:100]}...") # Print first 100 chars of response for logging
                         
                         # --- Actual posting logic ---
@@ -458,6 +470,10 @@ if __name__ == "__main__":
         search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI']
         # Optional external URL to fetch content from for enriching responses
         external_url_for_agent_response = "https://playhouse-ai.world/"
+        # Configuration for LLM usage
+        USE_LLM_FOR_RESPONSES = True  # Set to True to enable LLM-based responses
+        # Prefix for the LLM prompt, guiding its response style and purpose
+        LLM_PROMPT_PREFIX = "You are a friendly Reddit bot named Playhouse AI Agent. Your goal is to gently introduce Playhouse AI in conversations about social gatherings or meeting new people. Keep your responses natural, helpful, and concise (under 150 words). Avoid being overly promotional. Base your responses on the context provided, if any. If no context, make a general comment or question about Playhouse AI relevant to social interactions."
 
         # Print initial agent configuration for user's awareness
         print("\n--- Initializing Reddit Agent with following configuration ---")
@@ -466,10 +482,13 @@ if __name__ == "__main__":
         print(f"Response phrases loaded: {len(response_list) > 0}")
         if external_url_for_agent_response:
             print(f"Using external link for responses: {external_url_for_agent_response}")
+        if USE_LLM_FOR_RESPONSES:
+            print(f"Using LLM for responses: {USE_LLM_FOR_RESPONSES}")
+            print(f"LLM Prompt Prefix: {LLM_PROMPT_PREFIX[:100]}...")
         print("----------------------------------------------------------")
 
         # Start the main agent loop
-        run_reddit_agent(reddit_instance, target_subreddits, search_keywords, response_list, replied_posts_filename, replied_posts_set, external_url_for_agent_response)
+        run_reddit_agent(reddit_instance, target_subreddits, search_keywords, response_list, replied_posts_filename, replied_posts_set, external_url_for_agent_response, USE_LLM_FOR_RESPONSES, LLM_PROMPT_PREFIX)
 
     else:
         print("Failed to initialize Reddit. Please check praw.ini credentials and ensure the file exists.")
