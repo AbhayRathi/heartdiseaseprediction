@@ -8,6 +8,7 @@
 
 
 
+
+socks5://localhost:9050
 http://myproxy.com:8080
 http://user:password@192.168.1.1:3128
-socks5://localhost:9050
