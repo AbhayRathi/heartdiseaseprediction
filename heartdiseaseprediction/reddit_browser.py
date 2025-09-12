@@ -248,39 +248,90 @@ def get_web_content(url, proxy=None):
         print(f"Error processing content from {url}: {e}")
         return None
 
+# Generates a response using the Gemini LLM.
+def generate_llm_response(prompt, model_name="gemini-pro"):
+    """
+    Generates a response using the Google Gemini LLM.
+
+    Ensures the GEMINI_API_KEY is configured before attempting to generate a response.
+
+    Args:
+        prompt (str): The prompt to send to the LLM.
+        model_name (str, optional): The name of the Gemini model to use. Defaults to "gemini-pro".
+
+    Returns:
+        str or None: The generated text response from the LLM, or None if an error occurs
+                     or the API key is not configured.
+    """
+    if not GEMINI_API_KEY:
+        print("Error: GEMINI_API_KEY not configured. Cannot generate LLM response.")
+        return None
+
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel(model_name)
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error generating LLM response: {e}")
+        return None
+
 # Generates a response, optionally including content from a URL.
-def generate_agent_response(response_phrases, url=None, snippet_length=200, proxy=None):
+def generate_agent_response(response_phrases, url=None, snippet_length=200, proxy=None, use_llm=False, llm_prompt_prefix=""):
     """
     Generates a complete response string for the Reddit agent.
 
-    This function combines a randomly selected base phrase with an optional
-    snippet of text fetched from a given URL. The URL content is truncated
-    to `snippet_length` if it's too long.
+    This function can either combine a randomly selected base phrase with an optional
+    snippet of text fetched from a given URL, or it can use an LLM for more advanced responses.
 
     Args:
-        response_phrases (list): A list of base phrases for the response.
+        response_phrases (list): A list of base phrases for the response (used if use_llm is False).
         url (str, optional): An optional URL to fetch additional content from.
                              Defaults to None.
         snippet_length (int, optional): The maximum length of the snippet to
                                         extract from the web content. Defaults to 200.
         proxy (str, optional): The proxy server URL to use for fetching web content.
                                Defaults to None.
+        use_llm (bool, optional): If True, an LLM will be used to generate the response.
+                                  Defaults to False.
+        llm_prompt_prefix (str, optional): A prefix to add to the prompt sent to the LLM.
+                                           Defaults to an empty string.
 
     Returns:
-        str: The full agent response, potentially including a web content snippet and source.
+        str: The full agent response.
     """
-    base_response = get_random_response(response_phrases)
-    
-    if url:
-        # Attempt to fetch web content if a URL is provided
-        web_text = get_web_content(url, proxy=proxy)
-        if web_text:
-            # Create a snippet from the fetched text
-            snippet = web_text[:snippet_length].strip() + "..." if len(web_text) > snippet_length else web_text.strip()
-            # Combine the base response with the web snippet and source
-            return f"{base_response}\n\nHere's something I found: \"{snippet}\"\n\n(Source: {url})"
-    
-    return base_response
+    final_response = ""
+
+    if use_llm:
+        llm_input_text = llm_prompt_prefix
+        if url:
+            web_text = get_web_content(url, proxy=proxy)
+            if web_text:
+                llm_input_text += f"\n\nHere is some context from a webpage: {web_text[:1000].strip()}...\n\n"
+        
+        if llm_input_text:
+            llm_response = generate_llm_response(llm_input_text)
+            if llm_response:
+                final_response = llm_response
+            else:
+                print("LLM response failed, falling back to basic response.")
+                final_response = get_random_response(response_phrases)
+        else:
+            final_response = get_random_response(response_phrases)
+    else:
+        base_response = get_random_response(response_phrases)
+        
+        if url:
+            web_text = get_web_content(url, proxy=proxy)
+            if web_text:
+                snippet = web_text[:snippet_length].strip() + "..." if len(web_text) > snippet_length else web_text.strip()
+                final_response = f"{base_response}\n\nHere's something I found: \"{snippet}\"\n\n(Source: {url})"
+            else:
+                final_response = base_response
+        else:
+            final_response = base_response
+
+    return final_response
 
 # Main function to run the Reddit agent.
 def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, replied_posts_file, replied_posts_set, external_link_for_agent_response=None):
