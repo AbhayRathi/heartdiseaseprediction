@@ -13,6 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import itertools
+import google.generativeai as genai
 
 # --- Configuration (praw.ini) ---
 # Make sure your praw.ini file is in this directory with your credentials:
@@ -21,6 +22,12 @@ import itertools
 # password = YOUR_REDDIT_PASSWORD
 # client_id = YOUR_CLIENT_ID
 # client_secret = YOUR_CLIENT_SECRET
+
+# --- Gemini LLM Configuration ---
+# It is highly recommended to set your Gemini API key as an environment variable (e.g., GEMINI_API_KEY)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+if not GEMINI_API_KEY:
+    print("Warning: GEMINI_API_KEY environment variable not set. LLM responses will not be available.")
 
 # Global iterator for proxy rotation
 proxy_cycle = None
