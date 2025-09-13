@@ -455,6 +455,20 @@ if __name__ == "__main__":
             print(f"Reddit API configured to use proxy: {first_proxy}")
 
     if reddit_instance:
+        # --- Gemini Model Verification ---
+        if GEMINI_API_KEY:
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                print("\n--- Available Gemini Models ---")
+                for m in genai.list_models():
+                    if "generateContent" in m.supported_generation_methods:
+                        print(f"  - {m.name}")
+                print("-------------------------------")
+            except Exception as e:
+                print(f"Error listing Gemini models: {e}")
+        else:
+            print("GEMINI_API_KEY not set, skipping Gemini model listing.")
+
         # Load response phrases from the configuration file
         response_file = 'response_phrases.txt'
         response_list = load_response_phrases(response_file)
