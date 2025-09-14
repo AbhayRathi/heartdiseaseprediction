@@ -249,7 +249,7 @@ def get_web_content(url, proxy=None):
         return None
 
 # Generates a response using the Gemini LLM.
-def generate_llm_response(prompt, model_name="gemini-pro"):
+def generate_llm_response(prompt, model_name="models/gemini-1.5-pro"):
     """
     Generates a response using the Google Gemini LLM.
 
@@ -257,7 +257,7 @@ def generate_llm_response(prompt, model_name="gemini-pro"):
 
     Args:
         prompt (str): The prompt to send to the LLM.
-        model_name (str, optional): The name of the Gemini model to use. Defaults to "gemini-pro".
+        model_name (str, optional): The name of the Gemini model to use. Defaults to "models/gemini-1.5-pro".
 
     Returns:
         str or None: The generated text response from the LLM, or None if an error occurs
@@ -408,7 +408,7 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
                         
                         # IMPORTANT: Adhere to Reddit's rate limits. Adjust sleep time as needed.
                         # Reddit generally limits 1 reply per 10 minutes per user/bot.
-                        time.sleep(10) # Pause to avoid hitting Reddit API rate limits
+                        time.sleep(600) # Pause to avoid hitting Reddit API rate limits (10 minutes = 600 seconds)
                     else:
                         print(f"  [SKIPPED   ] Already replied to post ID: {submission.id}")
 
@@ -455,19 +455,19 @@ if __name__ == "__main__":
             print(f"Reddit API configured to use proxy: {first_proxy}")
 
     if reddit_instance:
-        # --- Gemini Model Verification ---
-        if GEMINI_API_KEY:
-            try:
-                genai.configure(api_key=GEMINI_API_KEY)
-                print("\n--- Available Gemini Models ---")
-                for m in genai.list_models():
-                    if "generateContent" in m.supported_generation_methods:
-                        print(f"  - {m.name}")
-                print("-------------------------------")
-            except Exception as e:
-                print(f"Error listing Gemini models: {e}")
-        else:
-            print("GEMINI_API_KEY not set, skipping Gemini model listing.")
+        # --- Gemini Model Verification --- (Temporarily added for debugging, now removed)
+        # if GEMINI_API_KEY:
+        #     try:
+        #         genai.configure(api_key=GEMINI_API_KEY)
+        #         print("\n--- Available Gemini Models ---")
+        #         for m in genai.list_models():
+        #             if "generateContent" in m.supported_generation_methods:
+        #                 print(f"  - {m.name}")
+        #         print("-------------------------------")
+        #     except Exception as e:
+        #         print(f"Error listing Gemini models: {e}")
+        # else:
+        #     print("GEMINI_API_KEY not set, skipping Gemini model listing.")
 
         # Load response phrases from the configuration file
         response_file = 'response_phrases.txt'
