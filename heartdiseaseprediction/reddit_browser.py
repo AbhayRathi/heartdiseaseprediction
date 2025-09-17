@@ -479,9 +479,9 @@ if __name__ == "__main__":
 
         # --- Agent Configuration ---
         # List of subreddits the agent will monitor
-        target_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend']
+        target_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend', 'MakeNewFriendsHere', 'R4R', 'friendship', 'dating_advice', 'socialskills', 'NeedFriends', 'casualiama', 'AskReddit']
         # Keywords to search for in post titles and bodies to determine relevance
-        search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI']
+        search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI', 'meetup', 'connect', 'network', 'event', 'hang out', 'find friends', 'social anxiety', 'introduction', 'conversation', 'talk', 'group', 'community', 'looking for', 'looking to']
         # Optional external URL to fetch content from for enriching responses
         external_url_for_agent_response = "https://playhouse-ai.world/"
         # Configuration for LLM usage
