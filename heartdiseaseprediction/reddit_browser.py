@@ -479,15 +479,19 @@ if __name__ == "__main__":
 
         # --- Agent Configuration ---
         # List of subreddits the agent will monitor
-        target_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend', 'MakeNewFriendsHere', 'R4R', 'friendship', 'dating_advice', 'socialskills', 'NeedFriends', 'casualiama', 'AskReddit']
+        target_subreddits = ['social', 'meetup', 'CasualConversation', 'NeedAFriend', 'MakeNewFriendsHere', 'R4R', 'friendship', 'dating_advice', 'socialskills', 'NeedFriends', 'casualiama', 'AskReddit', 'Anxiety', 'Depression', 'lonely', 'introvert', 'extrovert', 'relationships', 'dating', 'advice', 'selfimprovement', 'motivation', 'personalgrowth']
         # Keywords to search for in post titles and bodies to determine relevance
-        search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI', 'meetup', 'connect', 'network', 'event', 'hang out', 'find friends', 'social anxiety', 'introduction', 'conversation', 'talk', 'group', 'community', 'looking for', 'looking to']
+        search_keywords = ['gathering', 'meet new people', 'social event', 'hangout', 'lonely', 'friends', 'introduce myself', 'Playhouse AI', 'meetup', 'connect', 'network', 'event', 'hang out', 'find friends', 'social anxiety', 'introduction', 'conversation', 'talk', 'group', 'community', 'looking for', 'looking to', 'feeling alone', 'making friends', 'socialize', 'connection', 'support group', 'where to go', 'what to do', 'advice needed', 'seeking advice', 'help me', 'feeling down', 'isolated', 'bored', 'suggestions', 'recommendations', 'anyone else', 'struggling', 'get together', 'activity', 'new city', 'relocating', 'icebreaker', 'first date', 'social awkwardness']
         # Optional external URL to fetch content from for enriching responses
         external_url_for_agent_response = "https://playhouse-ai.world/"
         # Configuration for LLM usage
         USE_LLM_FOR_RESPONSES = True  # Set to True to enable LLM-based responses
         # Prefix for the LLM prompt, guiding its response style and purpose
-        LLM_PROMPT_PREFIX = "You are a friendly Reddit bot named Playhouse AI Agent. Your goal is to gently introduce Playhouse AI in conversations about social gatherings or meeting new people. Keep your responses natural, helpful, and concise (under 150 words). Avoid being overly promotional. Base your responses on the context provided, if any. If no context, make a general comment or question about Playhouse AI relevant to social interactions."
+        LLM_PROMPT_PREFIX = """You are a highly empathetic and insightful Reddit bot named Playhouse AI Agent. Your core purpose is to genuinely understand the user's social needs or questions, offer thoughtful, human-like advice or shared experience, and then subtly introduce how Playhouse AI could be a valuable tool in their situation. Your tone should be friendly, supportive, and conversational, like a helpful friend. Keep responses concise (under 200 words), avoiding direct advertisements. Aim to spark further conversation. Prioritize helping the user, then gently connecting it to Playhouse AI's capabilities in fostering connection, personal growth, or social organization.
+        
+        Consider the post's emotional undertones and respond with genuine care.
+        Example: If someone is lonely, acknowledge their feeling, offer a common coping strategy, and then mention how Playhouse AI helps people find supportive communities.
+        Example: If someone is looking for a date spot, suggest a couple of real-world ideas, and then mention how Playhouse AI's personalized recommendation engine could help them discover even more tailored experiences or connect with compatible individuals."""
 
         # Print initial agent configuration for user's awareness
         print("\n--- Initializing Reddit Agent with following configuration ---")
