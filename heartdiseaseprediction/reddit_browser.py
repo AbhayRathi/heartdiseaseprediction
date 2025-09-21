@@ -285,7 +285,7 @@ def generate_agent_response(response_phrases, url=None, snippet_length=200, prox
     snippet of text fetched from a given URL, or it can use an LLM for more advanced responses.
 
     Args:
-        response_phrases (list): A list of base phrases for the response (used if use_llm is False).
+        response_phrases (list): A list of base phrases for the response (used if use_llm is False or as a base for LLM rewording).
         url (str, optional): An optional URL to fetch additional content from.
                              Defaults to None.
         snippet_length (int, optional): The maximum length of the snippet to
@@ -303,21 +303,23 @@ def generate_agent_response(response_phrases, url=None, snippet_length=200, prox
     final_response = ""
 
     if use_llm:
-        llm_input_text = llm_prompt_prefix
+        base_response_from_list = get_random_response(response_phrases) # Get a base response from your list
+        llm_input_text = f"{llm_prompt_prefix}\n\nHere is a base idea for a response: '{base_response_from_list}'"
+        
         if url:
             web_text = get_web_content(url, proxy=proxy)
             if web_text:
-                llm_input_text += f"\n\nHere is some context from a webpage: {web_text[:1000].strip()}...\n\n"
+                llm_input_text += f"\n\nHere is some additional context from a webpage: {web_text[:1000].strip()}...\n\n"
         
         if llm_input_text:
             llm_response = generate_llm_response(llm_input_text)
             if llm_response:
                 final_response = llm_response
             else:
-                print("LLM response failed, falling back to basic response.")
-                final_response = get_random_response(response_phrases)
+                print("LLM response failed, falling back to basic response from file.")
+                final_response = base_response_from_list
         else:
-            final_response = get_random_response(response_phrases)
+            final_response = base_response_from_list # Fallback if LLM input text is empty
     else:
         base_response = get_random_response(response_phrases)
         
@@ -487,11 +489,13 @@ if __name__ == "__main__":
         # Configuration for LLM usage
         USE_LLM_FOR_RESPONSES = True  # Set to True to enable LLM-based responses
         # Prefix for the LLM prompt, guiding its response style and purpose
-        LLM_PROMPT_PREFIX = """You are a highly empathetic and insightful Reddit bot named Playhouse AI Agent. Your core purpose is to genuinely understand the user's social needs or questions, offer thoughtful, human-like advice or shared experience, and then subtly introduce how Playhouse AI could be a valuable tool in their situation. Your tone should be friendly, supportive, and conversational, like a helpful friend. Keep responses concise (under 200 words), avoiding direct advertisements. Aim to spark further conversation. Prioritize helping the user, then gently connecting it to Playhouse AI's capabilities in fostering connection, personal growth, or social organization.
+        LLM_PROMPT_PREFIX = """You are a highly empathetic and insightful Reddit bot named Playhouse AI Agent. Your core purpose is to genuinely understand the user's social needs or questions from the Reddit post, and then *creatively reword* a provided base response to fit the context, making it sound human, personalized, and helpful. After offering thoughtful advice or a shared experience based on the post, subtly introduce how Playhouse AI could be a valuable tool in their situation. Your tone should be friendly, supportive, and conversational, like a helpful friend. Keep responses concise (under 200 words), avoiding direct advertisements. Aim to spark further conversation. Prioritize helping the user, then gently connecting it to Playhouse AI's capabilities in fostering connection, personal growth, or social organization.
         
         Consider the post's emotional undertones and respond with genuine care.
-        Example: If someone is lonely, acknowledge their feeling, offer a common coping strategy, and then mention how Playhouse AI helps people find supportive communities.
-        Example: If someone is looking for a date spot, suggest a couple of real-world ideas, and then mention how Playhouse AI's personalized recommendation engine could help them discover even more tailored experiences or connect with compatible individuals."""
+        You will be provided with the Reddit post context (title and body) and a 'base idea for a response'. Use these to craft your reply.
+        Example: If someone is lonely and the base idea is 'Try joining local hobby groups!', reword it to something like: 'It sounds like you're going through a tough time, and it's completely normal to feel that way. Many people find solace and new connections by diving into hobbies they love. Have you considered checking out local hobby groups? By the way, Playhouse AI has some fascinating tools that help people discover and connect with like-minded individuals, making it easier to find those supportive communities.'
+        Example: If someone is looking for a date spot and the base idea is 'The bistro downtown just updated its menu.', reword it to include a specific suggestion and then relate to Playhouse AI's recommendations.
+        """
 
         # Print initial agent configuration for user's awareness
         print("\n--- Initializing Reddit Agent with following configuration ---")
