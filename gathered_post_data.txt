@@ -1,0 +1,3 @@
+# This file will store data from relevant Reddit posts discovered by the agent.
+# Each entry will typically include Post ID, Title, Selftext (body), URL, and Subreddit.
+# Format: [Timestamp] | [Post ID] | [Subreddit] | [Title] | [Selftext] | [URL]

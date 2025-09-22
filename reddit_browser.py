@@ -178,6 +178,28 @@ def save_replied_post(file_path, submission_id):
     except Exception as e:
         print(f"Error saving replied post ID {submission_id}: {e}")
 
+# Saves data of a gathered Reddit post to a text file.
+def save_gathered_post_data(file_path, submission):
+    """
+    Saves relevant data from a Reddit submission to a text file.
+
+    This function captures the post's ID, subreddit, title, body (selftext), and URL,
+    appending it to the specified file. It's used for data collection even when a reply
+    is not made, allowing for passive learning.
+
+    Args:
+        file_path (str): The path to the file storing gathered post data.
+        submission (praw.models.Submission): The Reddit submission object.
+    """
+    try:
+        with open(file_path, 'a', encoding='utf-8') as f:
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            post_data = f"{timestamp} | {submission.id} | r/{submission.subreddit.display_name} | {submission.title.replace('\n', ' ')} | {submission.selftext.replace('\n', ' ')} | {submission.url}\n"
+            f.write(post_data)
+        print(f"  [GATHERED  ] Saved data for post ID: {submission.id}")
+    except Exception as e:
+        print(f"  [ERROR     ] Error saving gathered post data for {submission.id}: {e}")
+
 # Returns a random response phrase.
 def get_random_response(phrases):
     """
@@ -409,6 +431,7 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
     
     print("\n--- Starting Reddit Agent Cycle ---")
     current_proxy = get_next_proxy() # Get initial proxy for this cycle or None if no proxies
+    last_reply_timestamp = 0 # Initialize timestamp for reply interval tracking
 
     for subreddit_name in subreddits:
         try:
@@ -422,9 +445,18 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
                 
                 # Check if any keyword is present in the title or selftext
                 if any(keyword in title or keyword in selftext for keyword in keywords):
+                    # Always save data for relevant posts, regardless of whether a reply is made
+                    save_gathered_post_data('gathered_post_data.txt', submission)
+
                     # Check if the agent has already replied to this post
                     if submission.id not in replied_posts_set:
                         print(f"  [DETECTED] Relevant post: '{submission.title}' (ID: {submission.id}) by u/{submission.author}")
+                        
+                        # Check if enough time has passed since the last reply
+                        current_time = time.time()
+                        if (current_time - last_reply_timestamp) < REPLY_INTERVAL_SECONDS:
+                            print(f"  [SKIPPED   ] Waiting for reply interval. Next reply possible in {REPLY_INTERVAL_SECONDS - (current_time - last_reply_timestamp):.0f} seconds.")
+                            continue # Skip replying, but data is already gathered
                         
                         # Combine title and selftext for keyword search
                         submission_content = f"{title} {selftext}"
@@ -437,7 +469,7 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
 
                         # Generate the agent's response
                         llm_input_context = f"User post title: {submission.title}\nUser post body: {submission.selftext}"
-                        full_llm_prompt = f"{llm_prompt_prefix}\n\n{llm_input_context}"
+                        full_llm_prompt = f"{llm_prompt_prefix}\n\nHere are some relevant ideas/phrases from your knowledge base: {selected_response_phrases}\n\n{llm_input_context}"
                         
                         # Pass the selected relevant phrases to generate_agent_response
                         agent_response = generate_agent_response(selected_response_phrases, # Pass relevant phrases here
@@ -454,6 +486,7 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
                             print(f"  [ACTION    ] Replied to post ID: {submission.id}")
                             replied_posts_set.add(submission.id) # Add to in-memory set
                             save_replied_post(replied_posts_file, submission.id) # Save to file for persistence
+                            last_reply_timestamp = time.time() # Update timestamp after a successful reply
                         except praw.exceptions.APIException as e:
                             # Handle Reddit API specific errors (e.g., rate limits, invalid scopes)
                             print(f"  [ERROR     ] Failed to reply to post {submission.id}: {e}")
@@ -463,7 +496,7 @@ def run_reddit_agent(reddit_instance, subreddits, keywords, response_phrases, re
                         
                         # IMPORTANT: Adhere to Reddit's rate limits. Adjust sleep time as needed.
                         # Reddit generally limits 1 reply per 10 minutes per user/bot.
-                        time.sleep(600) # Pause to avoid hitting Reddit API rate limits (10 minutes = 600 seconds)
+                        time.sleep(REPLY_INTERVAL_SECONDS) # Pause for 2-3 minutes after a reply
                     else:
                         print(f"  [SKIPPED   ] Already replied to post ID: {submission.id}")
 
@@ -541,6 +574,8 @@ if __name__ == "__main__":
         external_url_for_agent_response = "https://playhouse-ai.world/"
         # Configuration for LLM usage
         USE_LLM_FOR_RESPONSES = True  # Set to True to enable LLM-based responses
+        # Minimum interval between replies in seconds (2 minutes = 120 seconds)
+        REPLY_INTERVAL_SECONDS = 120 # Adjust as needed
         # Prefix for the LLM prompt, guiding its response style and purpose
         LLM_PROMPT_PREFIX = """You are a highly empathetic and insightful Reddit bot named Playhouse AI Agent. Your core purpose is to genuinely understand the user's needs or questions from the Reddit post, which can range from general queries to social concerns. You will be provided with the Reddit post context (title and body) and a list of 'relevant base responses' from which you should draw inspiration. Your task is to *creatively synthesize a new, human-like, and personalized response* that directly addresses the user's query or offers thoughtful advice. After providing a helpful response, **organically and subtly introduce how Playhouse AI could be a valuable tool in their specific situation.**
         
