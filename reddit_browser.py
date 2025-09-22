@@ -195,8 +195,8 @@ def save_gathered_post_data(file_path, submission):
     try:
         with open(file_path, 'a', encoding='utf-8') as f:
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            # Corrected: Escaping the backslash in the f-string expression
-            post_data = f"{timestamp} | {submission.id} | r/{submission.subreddit.display_name} | {submission.title.replace('\\n', ' ')} | {submission.selftext.replace('\\n', ' ')} | {submission.url}\n"
+            # Corrected: Use single backslash for newline character in replace, and double backslash for literal newline at end of f-string.
+            post_data = f"{timestamp} | {submission.id} | r/{submission.subreddit.display_name} | {submission.title.replace('\n', ' ')} | {submission.selftext.replace('\n', ' ')} | {submission.url}\\n"
             f.write(post_data)
         print(f"  [GATHERED  ] Saved data for post ID: {submission.id}")
     except Exception as e:
