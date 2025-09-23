@@ -195,9 +195,10 @@ def save_gathered_post_data(file_path, submission):
     try:
         with open(file_path, 'a', encoding='utf-8') as f:
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            # Corrected: Use single backslash for newline character in replace, and double backslash for literal newline at end of f-string.
-            post_data = f"{timestamp} | {submission.id} | r/{submission.subreddit.display_name} | {submission.title.replace('\n', ' ')} | {submission.selftext.replace('\n', ' ')} | {submission.url}\\n"
+            # Corrected: Remove newline from f-string, add it with a separate write call.
+            post_data = f"{timestamp} | {submission.id} | r/{submission.subreddit.display_name} | {submission.title.replace('\n', ' ')} | {submission.selftext.replace('\n', ' ')} | {submission.url}"
             f.write(post_data)
+            f.write('\n') # Add newline explicitly after writing post data
         print(f"  [GATHERED  ] Saved data for post ID: {submission.id}")
     except Exception as e:
         print(f"  [ERROR     ] Error saving gathered post data for {submission.id}: {e}")
